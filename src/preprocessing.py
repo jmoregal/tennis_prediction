@@ -45,34 +45,40 @@ def h2h(df):
     return df
 
 def surface_ratio(df):
-    "Compute win ratio on each surface for both players"
-    df['surface_ratio_Player_1'] = 0.5
-    df['surface_ratio_Player_2'] = 0.5
-
-    surface_stats = {}
+    """Compute surface winrate for each player on each surface."""
+    df['A_surface_winrate'] = 0.5
+    df['B_surface_winrate'] = 0.5
+    
+    winrate = {}
     for idx, row in df.iterrows():
-        playerA, playerB, surface, winner = row['Player_1'], row['Player_2'], row['Surface'], row['Winner']
-
+        playerA, playerB, surf, winner = row['Player_1'], row['Player_2'], row['Surface'], row['Winner']
+        
         for player in [playerA, playerB]:
-            if (player, surface) not in surface_stats:
-                surface_stats[(player, surface)] = {'wins': 0, 'total': 0}
-
-        df.at[idx, 'surface_ratio_Player_1'] = surface_stats[(playerA, surface)]['wins'] / (surface_stats[(playerA, surface)]['total']+1e-5)
-        df.at[idx, 'surface_ratio_Player_2'] = surface_stats[(playerB, surface)]['wins'] / (surface_stats[(playerB, surface)]['total']+1e-5)
-
-        surface_stats[(playerA, surface)]['total'] += 1
-        surface_stats[(playerB, surface)]['total'] += 1
-
+            if (player, surf) not in winrate:
+                winrate[(player, surf)] = {'wins':0, 'matches':0}
+        
+        # Asignar antes de actualizar
+        df.at[idx, 'A_surface_winrate'] = winrate[(playerA, surf)]['wins'] / (winrate[(playerA, surf)]['matches']+1e-5)
+        df.at[idx, 'B_surface_winrate'] = winrate[(playerB, surf)]['wins'] / (winrate[(playerB, surf)]['matches']+1e-5)
+        
+        # Actualizar después
+        winrate[(playerA, surf)]['matches'] += 1
+        winrate[(playerB, surf)]['matches'] += 1
         if winner == playerA:
-            surface_stats[(playerA, surface)]['wins'] += 1
+            winrate[(playerA, surf)]['wins'] += 1
         else:
-            surface_stats[(playerB, surface)]['wins'] += 1
+            winrate[(playerB, surf)]['wins'] += 1
+    
+    return df
 
+def lower_rank_won(df):
+    df['Lower_Rank_Won'] = np.where(df['Winner_Rank'] > df['Loser_Rank'], 1, 0)
     return df
 
 def final_preprocessing(str_path):
     df = load_data(str_path)
     df = preprocess_data(df)
+    df = lower_rank_won(df)
     df = h2h(df)
     df = surface_ratio(df)
     return df
