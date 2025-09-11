@@ -80,6 +80,40 @@ def add_Surface_winrate(df: pd.DataFrame) -> pd.DataFrame:
     
     return df
 
+def add_win_streaks(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Añade columnas streak_1 y streak_2 con la racha de victorias
+    para cada jugador antes del partido.
+    """
+    # Asegurar orden temporal
+    df = df.sort_values("Date").reset_index(drop=True)
+
+    # Diccionario para guardar rachas actuales
+    streaks = {}
+
+    streak_1 = []
+    streak_2 = []
+
+    for _, row in df.iterrows():
+        p1, p2, winner = row["Player_1"], row["Player_2"], row["Winner"]
+
+        # Racha previa antes del partido
+        streak_1.append(streaks.get(p1, 0))
+        streak_2.append(streaks.get(p2, 0))
+
+        # Actualizar racha
+        if winner == p1:
+            streaks[p1] = streaks.get(p1, 0) + 1
+            streaks[p2] = 0
+        else:
+            streaks[p2] = streaks.get(p2, 0) + 1
+            streaks[p1] = 0
+
+    df["streak_1"] = streak_1
+    df["streak_2"] = streak_2
+
+    return df
+
 # --------------------
 # 4. Pipeline final
 # --------------------
@@ -90,6 +124,7 @@ def preprocess(path: str) -> pd.DataFrame:
     df = add_rank_diff(df)
     df = add_h2h(df)
     df = add_Surface_winrate(df)
+    df = add_win_streaks(df)
     
     # Definir target: 1 si gana A, 0 si gana B
     df['target'] = (df['Winner'] == df['Player_1']).astype(int)
